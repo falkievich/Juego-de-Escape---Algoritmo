@@ -1,15 +1,10 @@
+import time
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from pydantic import BaseModel
-import time
-
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 
 app = FastAPI()
-
-# CORS (si accedieras desde otro dominio, aunque en este caso no hace falta)
-from fastapi.middleware.cors import CORSMiddleware
 
 app.add_middleware(
     CORSMiddleware,
@@ -18,10 +13,8 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Servimos el archivo estático
 app.mount("/static", StaticFiles(directory="static"), name="static")
 
-# Ruta raíz: devuelve tu HTML
 @app.get("/")
 def root():
     return FileResponse("static/index.html")
@@ -34,6 +27,8 @@ pos_salida = [0, 2]
 turno_actual = 1
 juego_terminado = False
 mensaje_final = None
+tiempo_inicio = time.time()  # Guarda el tiempo de inicio del servidor
+juego_empezado = False       # Bandera para comenzar después de 10s
 
 MOVIMIENTOS = [(-1, 0), (1, 0), (0, -1), (0, 1)]
 
@@ -58,7 +53,24 @@ def mover_hacia_objetivo(pos_actual, objetivo, otra_ficha):
 
 @app.get("/estado")
 def get_estado():
-    global pos_roja, pos_amarilla, pos_salida, turno_actual, juego_terminado, mensaje_final
+    global pos_roja, pos_amarilla, pos_salida, turno_actual
+    global juego_terminado, mensaje_final, tiempo_inicio, juego_empezado
+
+    tiempo_actual = time.time()
+    tiempo_transcurrido = tiempo_actual - tiempo_inicio
+
+    # Durante los primeros 10 segundos, solo devolvemos el estado inicial
+    if not juego_empezado:
+        if tiempo_transcurrido < 10: 
+            return {
+                "posRoja": pos_roja,
+                "posAmarilla": pos_amarilla,
+                "posSalida": pos_salida,
+                "turno": turno_actual,
+                "mensaje": None
+            }
+        else:
+            juego_empezado = True  # 👈 Ahora sí se puede empezar el juego
 
     if juego_terminado:
         return {
@@ -75,7 +87,6 @@ def get_estado():
     else:
         pos_amarilla = mover_hacia_objetivo(pos_amarilla, pos_roja, pos_roja)
 
-    # Verificamos condiciones de finalización
     if pos_roja == pos_salida:
         juego_terminado = True
         mensaje_final = "✅ ¡La ficha roja escapó con éxito!"
