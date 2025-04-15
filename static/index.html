@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>Juego Ficha Roja vs Amarilla</title>
+  <style>
+    canvas {
+      border: 2px solid black;
+      background-color: #add8e6; /* celeste */
+      display: block;
+      margin: 20px auto;
+    }
+    h2 {
+      text-align: center;
+    }
+  </style>
+</head>
+<body>
+  <h2>Juego: Ficha Roja vs Ficha Amarilla</h2>
+  <canvas id="tablero" width="300" height="300"></canvas>
+
+  <script>
+    const canvas = document.getElementById('tablero');
+    const ctx = canvas.getContext('2d');
+
+    const filas = 3;
+    const columnas = 3;
+    const cellSize = canvas.width / columnas;
+
+    const COLOR_TABLERO = '#add8e6';
+    const COLOR_SALIDA = '#90ee90';
+    const COLOR_ROJA = 'red';
+    const COLOR_AMARILLA = 'gold';
+
+    // Dibuja el tablero con las fichas
+    function dibujarTablero(posRoja, posAmarilla, posSalida, turno) {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+      for (let i = 0; i < filas; i++) {
+        for (let j = 0; j < columnas; j++) {
+          let x = j * cellSize;
+          let y = i * cellSize;
+
+          if (posSalida[0] === i && posSalida[1] === j) {
+            ctx.fillStyle = COLOR_SALIDA;
+          } else {
+            ctx.fillStyle = COLOR_TABLERO;
+          }
+
+          ctx.fillRect(x, y, cellSize, cellSize);
+          ctx.strokeRect(x, y, cellSize, cellSize);
+        }
+      }
+
+      // Ficha Roja
+      ctx.beginPath();
+      ctx.fillStyle = COLOR_ROJA;
+      ctx.arc(
+        posRoja[1] * cellSize + cellSize / 2,
+        posRoja[0] * cellSize + cellSize / 2,
+        cellSize / 4,
+        0,
+        2 * Math.PI
+      );
+      ctx.fill();
+
+      // Ficha Amarilla
+      ctx.beginPath();
+      ctx.fillStyle = COLOR_AMARILLA;
+      ctx.arc(
+        posAmarilla[1] * cellSize + cellSize / 2,
+        posAmarilla[0] * cellSize + cellSize / 2,
+        cellSize / 4,
+        0,
+        2 * Math.PI
+      );
+      ctx.fill();
+    }
+
+    // Función para consultar al backend y actualizar el tablero
+    async function actualizarEstado() {
+      try {
+        const res = await fetch("/estado"); // ← URL del backend
+        const data = await res.json();
+
+        dibujarTablero(data.posRoja, data.posAmarilla, data.posSalida, data.turno);
+
+        if (data.mensaje) {
+          alert(data.mensaje);
+          clearInterval(intervalo); // Detiene el juego si ya se resolvió
+        }
+
+      } catch (error) {
+        console.error("Error al actualizar el estado:", error);
+      }
+    }
+
+    // Llamada inicial y luego cada 5 segundos
+    actualizarEstado();
+    const intervalo = setInterval(actualizarEstado, 5000);
+  </script>
+</body>
+</html>
